@@ -9,12 +9,13 @@ public class FlaminFinger : MonoBehaviour {
     public KMAudio Audio;
     public KMBombInfo Bomb;
     public KMBombModule Module;
+    public KMSelectable ModuleSelectable;
 
     public KMSelectable ScreenButton;
     public Material[] LightMaterials;
     public TextMesh TimerText;
     public GameObject[] LightTiles;
-
+    public AudioSource[] Music;
 
     // Module info
     private int coins = 0;
@@ -35,6 +36,27 @@ public class FlaminFinger : MonoBehaviour {
 
     private bool canStart = false;
 
+    private bool focused = false;
+    private bool canPlay = false;
+    private int selectedTile = 576;
+    private int nextTile = 576;
+    private int traveledTiles = 2;
+    private int allMazeTiles = 0;
+
+    private float timeLeft = 0.0f;
+    private bool playTrailAnim = false;
+
+    private int rigZone = 0;
+
+    private static bool canPlayIntro = true;
+    
+    private int song = 0;
+
+    /// Code taken from Cursor Maze
+    private RaycastHit[] AllHit;
+    private string[] objNames = new string[625];
+
+
     // Logging info
     private static int moduleIdCounter = 1;
     private int moduleId;
@@ -45,6 +67,21 @@ public class FlaminFinger : MonoBehaviour {
         moduleId = moduleIdCounter++;
         ScreenButton.OnInteract += delegate () { PressScreen(); return false; };
         Module.OnActivate += OnActivate;
+
+        /// Code taken from Cursor Maze
+        for (int i = 0; i < objNames.Length; i++) {
+            objNames[i] = "PathCM" + moduleId + "-" + i;
+            LightTiles[i].name = objNames[i];
+        }
+
+        if (Application.isEditor)
+            focused = true;
+
+        ModuleSelectable.OnFocus += delegate () { focused = true; };
+        ModuleSelectable.OnDefocus += delegate () { focused = false; };
+
+        /// Code taken from Pow
+        Bomb.OnBombExploded += delegate () { if (Music[song].isPlaying) Music[song].Stop(); };
     }
 
     // Sets up the module
@@ -58,12 +95,88 @@ public class FlaminFinger : MonoBehaviour {
 
     // Ran as lights turn on
     private void OnActivate() {
+        StartCoroutine(Startup());
+    }
+
+    // Ran as the game returns to the office
+    private void OnDestroy() {
+        canPlayIntro = false;
+        if (Music[song].isPlaying) Music[song].Stop();
+    }
+
+    // Plays startup animation
+    private IEnumerator Startup() {
+        yield return new WaitForSeconds(0.5f);
+
+        if (canPlayIntro) {
+            canPlayIntro = false;
+            Audio.PlaySoundAtTransform("startup_short", transform);
+        }
+        
+        yield return new WaitForSeconds(3.0f);
         canStart = true;
     }
 
 
     // Called every frame
     private void Update() {
+        if (focused && canPlay) {
+            /// Code taken from Cursor Maze
+            AllHit = Physics.RaycastAll(Camera.main.ScreenPointToRay(Input.mousePosition));
+            List<string> names = new List<string>();
+
+            foreach (RaycastHit hit in AllHit) {
+                names.Add(hit.collider.name);
+                if (objNames.Contains(hit.collider.name)) {
+                    // Move to the next tile
+                    if (nextTile == int.Parse(hit.collider.name.Split('-')[1])) {
+                        LightTiles[selectedTile].GetComponent<Renderer>().material = LightMaterials[0];
+                        selectedTile = nextTile;
+                        LightTiles[selectedTile].GetComponent<Renderer>().material = LightMaterials[2];
+
+                        switch (grid[selectedTile]) {
+                            case 1: // Up
+                                nextTile = selectedTile - 25;
+                                break;
+
+                            case 2: // Right
+                                nextTile = selectedTile + 1;
+                                break;
+
+                            case 3: // Down
+                                nextTile = selectedTile + 25;
+                                break;
+
+                            default: // Left
+                                nextTile = selectedTile - 1;
+                                break;
+                        }
+
+                        traveledTiles++;
+
+                        if (traveledTiles % 2 == 1)
+                            Audio.PlaySoundAtTransform("light_1", transform);
+
+                        else
+                            Audio.PlaySoundAtTransform("light_2", transform);
+
+
+                        // Rigs the timer when getting close to the end
+                        if ((double) traveledTiles / (double) allMazeTiles > 0.90)
+                            rigZone = 2;
+
+                        else if ((double) traveledTiles / (double) allMazeTiles > 0.75)
+                            rigZone = 1;
+
+
+                        // Completed the maze
+                        if (traveledTiles >= allMazeTiles)
+                            Solve();
+                    }
+                }
+            }
+        }
+
         if (!moduleSolved && canStart && coins > 0) {
             canStart = false;
             coins--;
@@ -71,11 +184,43 @@ public class FlaminFinger : MonoBehaviour {
         }
     }
 
+    // Displays the timer
+    private void DisplayTime(float time) {
+        time = time < 0.0f ? 0.0f : time;
+
+        if (time < 9.9f)
+            TimerText.text = string.Format("0" + "{0:F1}", time);
+
+        else
+            TimerText.text = string.Format("{0:F1}", time);
+    }
+
+
+    // Turns all the tiles to black
+    private void Blackout() {
+        TimerText.text = "";
+
+        for (int i = 0; i < LightTiles.Length; i++) {
+            LightTiles[i].GetComponent<Renderer>().material = LightMaterials[0];
+        }
+    }
+
+    // Removes all red tiles from the grid
+    private void RemoveRed() {
+        playTrailAnim = false;
+
+        for (int i = 0; i < LightTiles.Length; i++) {
+            if (grid[i] != -1)
+                LightTiles[i].GetComponent<Renderer>().material = LightMaterials[0];
+        }
+    }
 
     // Wipes the grid
     private IEnumerator WipeGrid(bool checkCoins) {
-        if (checkCoins)
+        if (checkCoins) {
+            RemoveRed();
             Audio.PlaySoundAtTransform("fadeout", transform);
+        }
 
         else
             Audio.PlaySoundAtTransform("flaminfinger", transform);
@@ -94,12 +239,14 @@ public class FlaminFinger : MonoBehaviour {
             coins--;
             GenerateMaze();
         }
-            
+
         else if (!checkCoins)
             GenerateMaze();
 
-        else // else go to attract demo
+        else {
+            Debug.LogFormat("[Flamin' Finger #{0}] You ran out of coins. Flame over!", moduleId);
             canStart = true;
+        }
     }
 
 
@@ -136,30 +283,30 @@ public class FlaminFinger : MonoBehaviour {
 
             for (int i = 1; i <= 4; i++) {
                 if ((currentDir + 1) % 4 + 1 != i) { // Cannot go backwards
-                    if (bannedDirs[currentTile] % Math.Pow(2, i) == 0) {
+                    if (!GetBit(bannedDirs[currentTile], i - 1)) {
                         bool valid = true;
 
                         switch (i) { // Checks if the upcoming tile is occupied earlier in the maze
                             case 1:
-                                if (grid[currentTile - 50] > 0)
+                                if (currentTile - 50 < 0 || grid[currentTile - 50] > 0)
                                     valid = false;
 
                                 break;
 
                             case 2:
-                                if (grid[currentTile + 2] > 0)
+                                if (currentTile + 2 > 624 || grid[currentTile + 2] > 0)
                                     valid = false;
 
                                 break;
 
                             case 3:
-                                if (grid[currentTile + 50] > 0)
+                                if (currentTile + 50 > 624 || grid[currentTile + 50] > 0)
                                     valid = false;
 
                                 break;
 
                             default:
-                                if (grid[currentTile - 2] > 0)
+                                if (currentTile - 2 < 0 || grid[currentTile - 2] > 0)
                                     valid = false;
 
                                 break;
@@ -185,6 +332,7 @@ public class FlaminFinger : MonoBehaviour {
                 }
 
                 else { // Goes backwards and bans that current direction
+                    currentDir = grid[currentTile];
                     grid[currentTile] = 0;
 
                     switch (currentDir) {
@@ -217,7 +365,7 @@ public class FlaminFinger : MonoBehaviour {
                     if (grid[currentTile + 25] > 0)
                         currentDir = 1; // Up
 
-                    else if (grid[currentTile + 1] > 0)
+                    else if (grid[currentTile - 1] > 0)
                         currentDir = 2; // Right
 
                     else if (grid[currentTile - 25] > 0)
@@ -225,6 +373,8 @@ public class FlaminFinger : MonoBehaviour {
 
                     else
                         currentDir = 4; // Left
+
+                    grid[currentTile] = currentDir;
                 }
             }
 
@@ -263,7 +413,8 @@ public class FlaminFinger : MonoBehaviour {
 
         Debug.LogFormat("[Flamin' Finger #{0}] Finished generating the maze in {1} attempt(s).", moduleId, attempts);
         CreateWalls();
-        LogMaze();
+        CountTiles();
+        SetTime();
         StartCoroutine(DisplayMaze());
     }
 
@@ -309,9 +460,119 @@ public class FlaminFinger : MonoBehaviour {
                     LightTiles[transitionTiles[i][j]].GetComponent<Renderer>().material = LightMaterials[1];
 
             if (i == 24)
-                TimerText.text = "00.0";
+                DisplayTime(timeLeft);
 
             yield return new WaitForSeconds(0.026f);
+        }
+
+        StartMaze();
+    }
+
+    // Starts the maze
+    private void StartMaze() {
+        selectedTile = 576;
+        LightTiles[576].GetComponent<Renderer>().material = LightMaterials[2];
+
+        switch (grid[576]) {
+            case 2:
+                nextTile = 577;
+                break;
+
+            default:
+                nextTile = 551;
+                break;
+        }
+
+        rigZone = 0;
+        traveledTiles = 2;
+        canPlay = true;
+        StartMusic();
+        StartCoroutine(StartTimer());
+        StartCoroutine(StartLightTrail());
+    }
+
+    // Starts the music
+    private void StartMusic() {
+        song = UnityEngine.Random.Range(0, 20);
+
+        try {
+            Music[song].volume = GameMusicControl.GameMusicVolume;
+        }
+
+        catch (NullReferenceException) {
+            Music[song].volume = 0.25f;
+        }
+        
+        Music[song].Play();
+    }
+
+    // Counts down the timer
+    private IEnumerator StartTimer() {
+        yield return new WaitForSeconds(0.1f);
+
+        while (timeLeft > 0.0f && !moduleSolved) {
+            switch (rigZone) {
+                case 2:
+                    timeLeft -= 0.3f;
+                    DisplayTime(timeLeft);
+                    yield return new WaitForSeconds(1.0f / 60.0f); // 18x speed
+                    break;
+
+                case 1:
+                    timeLeft -= 0.1f;
+                    DisplayTime(timeLeft);
+                    yield return new WaitForSeconds(1.0f / 30.0f); // 3x speed
+                    break;
+
+                default:
+                    timeLeft -= 0.1f;
+                    DisplayTime(timeLeft);
+                    yield return new WaitForSeconds(0.1f); // 1x speed
+                    break;
+            }
+            
+        }
+
+        if (!moduleSolved)
+            StartCoroutine(Strike());
+    }
+
+    // Creates trails of lights
+    private IEnumerator StartLightTrail() {
+        playTrailAnim = true;
+
+        while (playTrailAnim) {
+            StartCoroutine(LightTrail());
+            yield return new WaitForSeconds(0.1f);
+        }
+    }
+
+    // Tracks the light trail
+    private IEnumerator LightTrail() {
+        int light = 601;
+
+        while (light != selectedTile && playTrailAnim) {
+            LightTiles[light].GetComponent<Renderer>().material = LightMaterials[2];
+            yield return new WaitForSeconds(1.0f / 60.0f);
+            LightTiles[light].GetComponent<Renderer>().material = LightMaterials[0];
+
+            switch (grid[light]) {
+                case 1: // Up
+                    light -= 25;
+                    break;
+
+                case 2: // Right
+                    light++;
+                    break;
+
+                case 3: // Down
+                    light += 25;
+                    break;
+
+                default: // Left
+                    light--;
+                    break;
+            }
         }
     }
 
@@ -445,6 +706,11 @@ public class FlaminFinger : MonoBehaviour {
     }
 
 
+    // Gets the bit from the parsed integer - https://www.reddit.com/r/csharp/comments/mx14gk/getting_bits_from_an_integer/
+    private bool GetBit(int bannedDirs, int dir) {
+        return (bannedDirs & (1 << dir)) != 0;
+    }
+
     // Assigns the walls in the maze
     private void CreateWalls() {
         for (int i = 26; i <= 598; i++) {
@@ -465,21 +731,20 @@ public class FlaminFinger : MonoBehaviour {
             grid[finishTiles[i]] = 0;
     }
 
-    // Logs the maze
-    private void LogMaze() {
-        string maze = "";
+    // Gets the number of travelable tiles in the maze
+    private void CountTiles() {
+        allMazeTiles = 0;
 
         for (int i = 0; i < grid.Length; i++) {
-            maze += grid[i].ToString();
-
-            if (i % 25 == 24)
-                maze += "\n";
-
-            else
-                maze += "\t";
+            if (grid[i] > 0)
+                allMazeTiles++;
         }
+    }
 
-        Debug.LogFormat("[Flamin' Finger #{0}] {1}.", moduleId, maze);
+    // Gets the allotted time for the maze
+    private void SetTime() {
+        timeLeft = allMazeTiles * 0.2f;
+        Debug.LogFormat("[Flamin' Finger #{0}] You have {1} seconds. Get your flame on!", moduleId, string.Format("{0:F1}", timeLeft));
     }
 
 
@@ -497,13 +762,64 @@ public class FlaminFinger : MonoBehaviour {
 
     // Module solves
     private void Solve() {
-        Debug.LogFormat("[Flamin' Finger #{0}] Module solved!", moduleId);
+        canPlay = false;
+        playTrailAnim = false;
+        moduleSolved = true;
+        Blackout();
+
+        if (Music[song].isPlaying) Music[song].Stop();
+        Audio.PlaySoundAtTransform("jackpot_short", transform);
+        Debug.LogFormat("[Flamin' Finger #{0}] Congratulations! You won the jackpot!", moduleId);
         GetComponent<KMBombModule>().HandlePass();
     }
 
     // Module strikes
-    private void Strike() {
-        Debug.LogFormat("[Flamin' Finger #{0}] Strike!", moduleId);
+    private IEnumerator Strike() {
+        canPlay = false;
+        Debug.LogFormat("[Flamin' Finger #{0}] Time's up! You couldn\'t complete the maze!", moduleId);
         GetComponent<KMBombModule>().HandleStrike();
+
+        if (Music[song].isPlaying) Music[song].Stop();
+        if (rigZone == 2) {
+            switch (UnityEngine.Random.Range(0, 8)) {
+                case 1:
+                    Audio.PlaySoundAtTransform("buzzerend_1", transform);
+                    break;
+
+                case 2:
+                    Audio.PlaySoundAtTransform("buzzerend_2", transform);
+                    break;
+
+                case 3:
+                    Audio.PlaySoundAtTransform("buzzerend_3", transform);
+                    break;
+
+                case 4:
+                    Audio.PlaySoundAtTransform("buzzerend_4", transform);
+                    break;
+
+                case 5:
+                    Audio.PlaySoundAtTransform("buzzerend_5", transform);
+                    break;
+
+                case 6:
+                    Audio.PlaySoundAtTransform("buzzerend_6", transform);
+                    break;
+
+                case 7:
+                    Audio.PlaySoundAtTransform("buzzerend_7", transform);
+                    break;
+
+                default:
+                    Audio.PlaySoundAtTransform("buzzerend_8", transform);
+                    break;
+            }
+        }
+
+        else
+            Audio.PlaySoundAtTransform("buzzer", transform);
+
+        yield return new WaitForSeconds(2.5f);
+        StartCoroutine(WipeGrid(true));
     }
 }

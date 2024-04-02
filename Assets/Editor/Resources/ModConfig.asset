@@ -14,7 +14,7 @@ MonoBehaviour:
   id: FlaminFinger
   title: Flamin' Finger
   author: Espik
-  description: 'Flamin'' Finger v1.0
+  description: 'Flamin'' Finger v0.9
 
     "Get your flame on."
 
@@ -28,7 +28,10 @@ MonoBehaviour:
     Manual: <available soon>
 
 
-    Source Code: https://github.com/Espik/Flamin-Finger'
-  version: v1.0
+    Source Code: https://github.com/Espik/Flamin-Finger
+
+
+    Music and audio assets belong to Namco.'
+  version: v0.9
   outputFolder: build
-  previewImage: {fileID: 0}
+  previewImage: {fileID: 2800000, guid: 4000f6740515f6b4c935fc4af34df630, type: 3}
