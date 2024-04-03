@@ -17,6 +17,9 @@ public class FlaminFinger : MonoBehaviour {
     public GameObject[] LightTiles;
     public AudioSource[] Music;
 
+    public AudioSource IntroMusic;
+    public AudioSource IntroMusicLong;
+
     // Module info
     private int coins = 0;
 
@@ -24,6 +27,12 @@ public class FlaminFinger : MonoBehaviour {
         119, 120, 121, 122, 123, 124, 144, 145, 146, 147, 148, 149 };
     private readonly int[] forbiddenTiles = { 19, 20, 21, 22, 23, 24, 44, 45, 46, 47, 48, 49, 69, 70, 71, 72, 73, 74, 94, 95, 96, 97, 98, 99,
         119, 120, 121, 122, 123, 124, 144, 145, 146, 147, 148, 149, 284, 285, 286, 287, 288, 309, 310, 311, 312, 313, 334, 335, 336, 337, 338 };
+
+    private readonly int[] flaminFingerTiles = { 151, 152, 153, 155, 159, 160, 161, 163, 167, 169, 171, 172, 173, 176, 180, 184, 186, 188, 189, 191, 192, 194, 196, 198,
+        201, 202, 205, 209, 210, 211, 213, 215, 217, 219, 221, 223, 226, 230, 234, 236, 238, 242, 244, 246, 248, 251, 255, 256, 257, 259, 261, 263, 267, 269, 271, 273,
+        350, 351, 352, 354, 355, 356, 358, 361, 363, 364, 365, 366, 368, 369, 370, 372, 373, 374, 375, 380, 383, 384, 386, 388, 393, 397, 399,
+        400, 401, 405, 408, 410, 411, 413, 415, 416, 418, 419, 422, 423, 425, 430, 433, 436, 438, 441, 443, 447, 449,
+        450, 454, 455, 456, 458, 461, 463, 464, 465, 466, 468, 469, 470, 472, 474};
 
     private int[][] transitionTiles = new int[49][];
 
@@ -62,9 +71,24 @@ public class FlaminFinger : MonoBehaviour {
     private int moduleId;
     private bool moduleSolved = false;
 
+    // Mod settings
+    private FlaminFingerSettings Settings;
+    sealed class FlaminFingerSettings {
+        public bool CanStrike = false;
+        public bool PlayFullSounds = false;
+        public bool RigTime = true;
+    }
+
+
     // Ran as bomb loads
     private void Awake() {
         moduleId = moduleIdCounter++;
+
+        // Module Settings
+        var modConfig = new ModConfig<FlaminFingerSettings>("FlaminFinger");
+        Settings = modConfig.Settings;
+        modConfig.Settings = Settings;
+
         ScreenButton.OnInteract += delegate () { PressScreen(); return false; };
         Module.OnActivate += OnActivate;
 
@@ -81,7 +105,12 @@ public class FlaminFinger : MonoBehaviour {
         ModuleSelectable.OnDefocus += delegate () { focused = false; };
 
         /// Code taken from Pow
-        Bomb.OnBombExploded += delegate () { if (Music[song].isPlaying) Music[song].Stop(); };
+        Bomb.OnBombExploded += delegate () {
+            if (Music[song].isPlaying) Music[song].Stop();
+            if (IntroMusic.isPlaying) IntroMusic.Stop();
+            if (IntroMusicLong.isPlaying) IntroMusicLong.Stop();
+            canPlayIntro = true;
+        };
     }
 
     // Sets up the module
@@ -91,6 +120,22 @@ public class FlaminFinger : MonoBehaviour {
             LightTiles[forbiddenTiles[i]].SetActive(false);
 
         SetTransition();
+
+        try {
+            IntroMusic.volume = GameMusicControl.GameSFXVolume;
+            IntroMusicLong.volume = GameMusicControl.GameSFXVolume;
+        }
+
+        catch (NullReferenceException) {
+            IntroMusic.volume = 0.25f;
+            IntroMusicLong.volume = 0.25f;
+        }
+
+        if (Settings.PlayFullSounds && canPlayIntro) {
+            canPlayIntro = false;
+            IntroMusicLong.Play();
+        }
+            
     }
 
     // Ran as lights turn on
@@ -100,20 +145,43 @@ public class FlaminFinger : MonoBehaviour {
 
     // Ran as the game returns to the office
     private void OnDestroy() {
-        canPlayIntro = false;
         if (Music[song].isPlaying) Music[song].Stop();
+        if (IntroMusic.isPlaying) IntroMusic.Stop();
+        if (IntroMusicLong.isPlaying) IntroMusicLong.Stop();
+        canPlayIntro = true;
     }
 
     // Plays startup animation
     private IEnumerator Startup() {
         yield return new WaitForSeconds(0.5f);
 
-        if (canPlayIntro) {
+        if (!Settings.PlayFullSounds && canPlayIntro) {
             canPlayIntro = false;
-            Audio.PlaySoundAtTransform("startup_short", transform);
+            IntroMusic.Play();
         }
-        
-        yield return new WaitForSeconds(3.0f);
+
+        StartCoroutine(ShowFlaminFinger());
+    }
+
+    // Shows "FLAMIN FINGER" on the screen
+    private IEnumerator ShowFlaminFinger() {
+        for (int i = 0; i < LightTiles.Length; i += 25) {
+            for (int j = 0; j < 25; j++) {
+                for (int k = 0; k < flaminFingerTiles.Length; k++) {
+                    if (flaminFingerTiles[k] == i + j) {
+
+                        if (i + j > 349)
+                            LightTiles[i + j].GetComponent<Renderer>().material = LightMaterials[2];
+
+                        else
+                            LightTiles[i + j].GetComponent<Renderer>().material = LightMaterials[1];
+                    }
+                }
+            }
+
+            yield return new WaitForSeconds(0.05f);
+        }
+
         canStart = true;
     }
 
@@ -177,9 +245,14 @@ public class FlaminFinger : MonoBehaviour {
             }
         }
 
+        // Starts the module
         if (!moduleSolved && canStart && coins > 0) {
             canStart = false;
             coins--;
+
+            if (IntroMusic.isPlaying) IntroMusic.Stop();
+            if (IntroMusicLong.isPlaying) IntroMusicLong.Stop();
+
             StartCoroutine(WipeGrid(false));
         }
     }
@@ -188,7 +261,13 @@ public class FlaminFinger : MonoBehaviour {
     private void DisplayTime(float time) {
         time = time < 0.0f ? 0.0f : time;
 
-        if (time < 9.9f)
+        if (time > 999.0f)
+            TimerText.text = "999";
+
+        else if (time > 99.9f)
+            TimerText.text = string.Format("{0:F0}", time);
+
+        else if (time < 9.9f)
             TimerText.text = string.Format("0" + "{0:F1}", time);
 
         else
@@ -232,7 +311,7 @@ public class FlaminFinger : MonoBehaviour {
             if (i == 24)
                 TimerText.text = "";
 
-            yield return new WaitForSeconds(0.026f);
+            yield return new WaitForSeconds(0.025f);
         }
 
         if (checkCoins && coins > 0) {
@@ -245,7 +324,7 @@ public class FlaminFinger : MonoBehaviour {
 
         else {
             Debug.LogFormat("[Flamin' Finger #{0}] You ran out of coins. Flame over!", moduleId);
-            canStart = true;
+            StartCoroutine(ShowFlaminFinger());
         }
     }
 
@@ -462,7 +541,7 @@ public class FlaminFinger : MonoBehaviour {
             if (i == 24)
                 DisplayTime(timeLeft);
 
-            yield return new WaitForSeconds(0.026f);
+            yield return new WaitForSeconds(0.025f);
         }
 
         StartMaze();
@@ -496,7 +575,7 @@ public class FlaminFinger : MonoBehaviour {
         song = UnityEngine.Random.Range(0, 20);
 
         try {
-            Music[song].volume = GameMusicControl.GameMusicVolume;
+            Music[song].volume = GameMusicControl.GameSFXVolume;
         }
 
         catch (NullReferenceException) {
@@ -511,30 +590,37 @@ public class FlaminFinger : MonoBehaviour {
         yield return new WaitForSeconds(0.1f);
 
         while (timeLeft > 0.0f && !moduleSolved) {
-            switch (rigZone) {
-                case 2:
-                    timeLeft -= 0.3f;
-                    DisplayTime(timeLeft);
-                    yield return new WaitForSeconds(1.0f / 60.0f); // 18x speed
-                    break;
+            if (Settings.RigTime) {
+                switch (rigZone) {
+                    case 2:
+                        timeLeft -= 0.2f;
+                        DisplayTime(timeLeft);
+                        yield return new WaitForSeconds(1.0f / 60.0f); // 12x speed
+                        break;
 
-                case 1:
-                    timeLeft -= 0.1f;
-                    DisplayTime(timeLeft);
-                    yield return new WaitForSeconds(1.0f / 30.0f); // 3x speed
-                    break;
+                    case 1:
+                        timeLeft -= 0.1f;
+                        DisplayTime(timeLeft);
+                        yield return new WaitForSeconds(1.0f / 30.0f); // 3x speed
+                        break;
 
-                default:
-                    timeLeft -= 0.1f;
-                    DisplayTime(timeLeft);
-                    yield return new WaitForSeconds(0.1f); // 1x speed
-                    break;
+                    default:
+                        timeLeft -= 0.1f;
+                        DisplayTime(timeLeft);
+                        yield return new WaitForSeconds(0.1f); // 1x speed
+                        break;
+                }
             }
-            
+
+            else {
+                timeLeft -= 0.1f;
+                DisplayTime(timeLeft);
+                yield return new WaitForSeconds(0.1f); // 1x speed
+            }
         }
 
         if (!moduleSolved)
-            StartCoroutine(Strike());
+            StartCoroutine(Fail());
     }
 
     // Creates trails of lights
@@ -703,6 +789,8 @@ public class FlaminFinger : MonoBehaviour {
         bannedDirs[384] = 1;
         bannedDirs[332] = 2;
         bannedDirs[282] = 2;
+        bannedDirs[194] = 1;
+        bannedDirs[142] = 2;
     }
 
 
@@ -743,7 +831,12 @@ public class FlaminFinger : MonoBehaviour {
 
     // Gets the allotted time for the maze
     private void SetTime() {
-        timeLeft = allMazeTiles * 0.2f;
+        if (Settings.RigTime)
+            timeLeft = allMazeTiles * 0.2f;
+
+        else
+            timeLeft = allMazeTiles * 0.1f;
+
         Debug.LogFormat("[Flamin' Finger #{0}] You have {1} seconds. Get your flame on!", moduleId, string.Format("{0:F1}", timeLeft));
     }
 
@@ -768,16 +861,24 @@ public class FlaminFinger : MonoBehaviour {
         Blackout();
 
         if (Music[song].isPlaying) Music[song].Stop();
-        Audio.PlaySoundAtTransform("jackpot_short", transform);
+
+        if (Settings.PlayFullSounds)
+            Audio.PlaySoundAtTransform("jackpot", transform);
+
+        else
+            Audio.PlaySoundAtTransform("jackpot_short", transform);
+
         Debug.LogFormat("[Flamin' Finger #{0}] Congratulations! You won the jackpot!", moduleId);
         GetComponent<KMBombModule>().HandlePass();
     }
 
-    // Module strikes
-    private IEnumerator Strike() {
+    // Time ran out
+    private IEnumerator Fail() {
         canPlay = false;
         Debug.LogFormat("[Flamin' Finger #{0}] Time's up! You couldn\'t complete the maze!", moduleId);
-        GetComponent<KMBombModule>().HandleStrike();
+
+        if (Settings.CanStrike)
+            GetComponent<KMBombModule>().HandleStrike();
 
         if (Music[song].isPlaying) Music[song].Stop();
         if (rigZone == 2) {
