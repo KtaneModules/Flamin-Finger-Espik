@@ -32,9 +32,23 @@ public class FlaminFinger : MonoBehaviour {
         201, 202, 205, 209, 210, 211, 213, 215, 217, 219, 221, 223, 226, 230, 234, 236, 238, 242, 244, 246, 248, 251, 255, 256, 257, 259, 261, 263, 267, 269, 271, 273,
         350, 351, 352, 354, 355, 356, 358, 361, 363, 364, 365, 366, 368, 369, 370, 372, 373, 374, 375, 380, 383, 384, 386, 388, 393, 397, 399,
         400, 401, 405, 408, 410, 411, 413, 415, 416, 418, 419, 422, 423, 425, 430, 433, 436, 438, 441, 443, 447, 449,
-        450, 454, 455, 456, 458, 461, 463, 464, 465, 466, 468, 469, 470, 472, 474};
+        450, 454, 455, 456, 458, 461, 463, 464, 465, 466, 468, 469, 470, 472, 474 };
+    
+    private readonly int[] waveStart1 = { 25, 25, 50, 75, 75, 50 };
+    private readonly int[] waveStart2 = { 525, 525, 550, 575, 575, 550 };
+
+    private readonly int[] fireworkStarts = { 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139,
+        154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 179, 204, 229, 254, 268, 269, 270, 279, 293, 294, 295, 304, 318, 319, 320, 329, 343, 344, 345,
+        354, 368, 369, 370, 379, 393, 394, 395, 404, 418, 419, 420, 429, 443, 444, 445, 454, 455, 456, 457, 458, 459, 460, 461, 462, 463, 464, 465, 466, 467, 468, 469, 470,
+        479, 480, 481, 482, 483, 484, 485, 486, 487, 488, 489, 490, 491, 492, 493, 494, 495, 504, 505, 506, 507, 508, 509, 510, 511, 512, 513, 514, 515, 516, 517, 518, 519, 520 };
+
+    private readonly int[] congratsCenters = { 304, 206, 161, 216, 318, 416, 461, 406 };
+
+    private readonly float[] fireworkTimes = { 0.02f, 0.44f, 0.28f, 0.13f, 0.35f, 0.29f, 0.17f, 0.28f, 0.21f, 0.13f, 0.18f, 0.16f, 0.18f, 0.11f, 0.19f, 0.23f, 0.29f, 0.11f, 0.24f, 0.34f };
 
     private int[][] transitionTiles = new int[49][];
+    private int[][] congratsTiles = new int[8][];
+    private int[][] jackpotTiles = new int[4][];
 
     private int[] grid = new int[625];
     private int[] bannedDirs = new int[625];
@@ -58,6 +72,8 @@ public class FlaminFinger : MonoBehaviour {
     private int rigZone = 0;
 
     private static bool canPlayIntro = true;
+
+    private bool animateWave = true;
     
     private int song = 0;
 
@@ -76,6 +92,7 @@ public class FlaminFinger : MonoBehaviour {
     sealed class FlaminFingerSettings {
         public bool CanStrike = false;
         public bool PlayFullSounds = false;
+        public bool PlayMusic = true;
         public bool RigTime = true;
     }
 
@@ -119,7 +136,7 @@ public class FlaminFinger : MonoBehaviour {
         for (int i = 0; i < forbiddenTiles.Length; i++)
             LightTiles[forbiddenTiles[i]].SetActive(false);
 
-        SetTransition();
+        SetArrays();
 
         try {
             IntroMusic.volume = GameMusicControl.GameSFXVolume;
@@ -160,6 +177,7 @@ public class FlaminFinger : MonoBehaviour {
             IntroMusic.Play();
         }
 
+        StartCoroutine(AnimateWave());
         StartCoroutine(ShowFlaminFinger());
     }
 
@@ -168,14 +186,8 @@ public class FlaminFinger : MonoBehaviour {
         for (int i = 0; i < LightTiles.Length; i += 25) {
             for (int j = 0; j < 25; j++) {
                 for (int k = 0; k < flaminFingerTiles.Length; k++) {
-                    if (flaminFingerTiles[k] == i + j) {
-
-                        if (i + j > 349)
-                            LightTiles[i + j].GetComponent<Renderer>().material = LightMaterials[2];
-
-                        else
-                            LightTiles[i + j].GetComponent<Renderer>().material = LightMaterials[1];
-                    }
+                    if (flaminFingerTiles[k] == i + j)
+                        LightTiles[i + j].GetComponent<Renderer>().material = LightMaterials[2];
                 }
             }
 
@@ -183,6 +195,57 @@ public class FlaminFinger : MonoBehaviour {
         }
 
         canStart = true;
+    }
+
+    // Animates the wave on the screen
+    private IEnumerator AnimateWave() {
+        animateWave = true;
+        int waveIndex = 0;
+
+        while (animateWave) {
+            StartCoroutine(SendWave(true, waveIndex));
+            StartCoroutine(SendWave(false, waveIndex));
+
+            yield return new WaitForSeconds(0.05f);
+
+            waveIndex++;
+            waveIndex %= 6;
+        }
+    }
+
+    // A wave particle on the screen
+    private IEnumerator SendWave(bool topPart, int index) {
+        if (topPart) {
+            int currentPoint = waveStart1[index];
+
+            for (int i = 0; i < 19 && animateWave; i++) {
+                if (animateWave)
+                    LightTiles[currentPoint].GetComponent<Renderer>().material = LightMaterials[1];
+
+                yield return new WaitForSeconds(0.05f);
+
+                if (animateWave) {
+                    LightTiles[currentPoint].GetComponent<Renderer>().material = LightMaterials[0];
+                    currentPoint++;
+                }
+            }
+        }
+
+        else {
+            int currentPoint = waveStart2[index];
+
+            for (int i = 0; i < 25 && animateWave; i++) {
+                if (animateWave)
+                    LightTiles[currentPoint].GetComponent<Renderer>().material = LightMaterials[1];
+
+                yield return new WaitForSeconds(0.05f);
+
+                if (animateWave) {
+                    LightTiles[currentPoint].GetComponent<Renderer>().material = LightMaterials[0];
+                    currentPoint++;
+                }
+            }
+        }
     }
 
 
@@ -248,6 +311,7 @@ public class FlaminFinger : MonoBehaviour {
         // Starts the module
         if (!moduleSolved && canStart && coins > 0) {
             canStart = false;
+            animateWave = false;
             coins--;
 
             if (IntroMusic.isPlaying) IntroMusic.Stop();
@@ -324,6 +388,7 @@ public class FlaminFinger : MonoBehaviour {
 
         else {
             Debug.LogFormat("[Flamin' Finger #{0}] You ran out of coins. Flame over!", moduleId);
+            StartCoroutine(AnimateWave());
             StartCoroutine(ShowFlaminFinger());
         }
     }
@@ -565,7 +630,10 @@ public class FlaminFinger : MonoBehaviour {
         rigZone = 0;
         traveledTiles = 2;
         canPlay = true;
-        StartMusic();
+
+        if (Settings.PlayMusic)
+            StartMusic();
+
         StartCoroutine(StartTimer());
         StartCoroutine(StartLightTrail());
     }
@@ -663,8 +731,8 @@ public class FlaminFinger : MonoBehaviour {
     }
 
 
-    // Assigns the tiles for wiping transitions
-    private void SetTransition() {
+    // Assigns the tiles for transitions and animations
+    private void SetArrays() {
         transitionTiles[0] = new int[] { 600 };
         transitionTiles[1] = new int[] { 575, 601 };
         transitionTiles[2] = new int[] { 550, 576, 602 };
@@ -714,6 +782,22 @@ public class FlaminFinger : MonoBehaviour {
         transitionTiles[46] = new int[] {  };
         transitionTiles[47] = new int[] {  };
         transitionTiles[48] = new int[] {  };
+
+        congratsTiles[0] = new int[] { 252, 253, 254, 277, 302, 327, 352, 353, 354 };
+        congratsTiles[1] = new int[] { 105, 106, 107, 130, 132, 155, 157, 180, 182, 205, 206, 207 };
+        congratsTiles[2] = new int[] { 60, 61, 62, 85, 87, 110, 112, 135, 137, 160, 162 };
+        congratsTiles[3] = new int[] { 115, 116, 117, 118, 140, 165, 167, 168, 190, 193, 215, 216, 217, 218 };
+        congratsTiles[4] = new int[] { 268, 269, 270, 293, 295, 318, 319, 343, 345, 368, 370 };
+        congratsTiles[5] = new int[] { 415, 416, 417, 440, 442, 465, 466, 467, 490, 492, 515, 517 };
+        congratsTiles[6] = new int[] { 460, 461, 462, 486, 511, 536, 561 };
+        congratsTiles[7] = new int[] { 406, 407, 430, 455, 456, 457, 482, 505, 506 };
+
+        jackpotTiles[0] = new int[] { 6, 8, 10, 11, 12, 14, 16, 31, 33, 35, 37, 39, 41, 57, 60, 62, 64, 66, 82, 85, 87, 89, 91, 107, 110, 111, 112, 114, 115, 116 };
+        jackpotTiles[1] = new int[] { 155, 159, 161, 162, 163, 165, 166, 167, 180, 184, 186, 188, 190, 192, 205, 207, 209, 211, 213, 215, 217,
+            230, 231, 233, 234, 236, 238, 240, 242, 255, 259, 261, 262, 263, 265, 267 };
+        jackpotTiles[2] = new int[] { 356, 357, 358, 360, 362, 364, 365, 366, 382, 385, 387, 389, 407, 410, 411, 412, 414, 415, 416, 432, 435, 437, 439, 457, 460, 462, 464, 465, 466 };
+        jackpotTiles[3] = new int[] { 500, 501, 502, 504, 505, 506, 508, 509, 511, 513, 515, 516, 518, 519, 520, 522, 523, 524, 526, 529, 531, 533, 536, 537, 540, 541, 543, 545, 548,
+            551, 554, 555, 556, 558, 561, 565, 566, 568, 570, 573, 576, 579, 581, 583, 586, 587, 590, 593, 595, 598, 600, 601, 604, 606, 608, 609, 611, 613, 615, 618, 619, 620, 623 };
     }
 
     // Resets the grid
@@ -835,7 +919,7 @@ public class FlaminFinger : MonoBehaviour {
             timeLeft = allMazeTiles * 0.2f;
 
         else
-            timeLeft = allMazeTiles * 0.1f;
+            timeLeft = (float) Math.Round(allMazeTiles * 0.12f, 1);
 
         Debug.LogFormat("[Flamin' Finger #{0}] You have {1} seconds. Get your flame on!", moduleId, string.Format("{0:F1}", timeLeft));
     }
@@ -868,8 +952,240 @@ public class FlaminFinger : MonoBehaviour {
         else
             Audio.PlaySoundAtTransform("jackpot_short", transform);
 
+        StartCoroutine(SolveAnimation());
+
         Debug.LogFormat("[Flamin' Finger #{0}] Congratulations! You won the jackpot!", moduleId);
         GetComponent<KMBombModule>().HandlePass();
+        
+    }
+
+    // Solve animation
+    private IEnumerator SolveAnimation() {
+        int rand = 0;
+
+        for (int i = 0; i < fireworkTimes.Length; i++) {
+            yield return new WaitForSeconds(fireworkTimes[i]);
+            rand = UnityEngine.Random.Range(0, fireworkStarts.Length);
+            StartCoroutine(Firework(fireworkStarts[rand]));
+        }
+
+        yield return new WaitForSeconds(0.5f);
+
+        for (int i = 0; i < congratsCenters.Length; i++) {
+            for (int j = 0; j < congratsTiles[i].Length; j++)
+                LightTiles[congratsTiles[i][j]].GetComponent<Renderer>().material = LightMaterials[1];
+
+            yield return new WaitForSeconds(0.1f);
+        }
+
+        yield return new WaitForSeconds(1.4f);
+
+        for (int i = 0; i < congratsCenters.Length; i++) {
+            for (int j = 0; j < congratsTiles[i].Length; j++)
+                LightTiles[congratsTiles[i][j]].GetComponent<Renderer>().material = LightMaterials[0];
+
+            StartCoroutine(Firework(congratsCenters[i]));
+            yield return new WaitForSeconds(1.0f / 30.0f);
+        }
+
+        yield return new WaitForSeconds(0.9f);
+
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < jackpotTiles[i].Length; j++) {
+                if (i % 2 == 1)
+                    LightTiles[jackpotTiles[i][j]].GetComponent<Renderer>().material = LightMaterials[2];
+                
+                else
+                    LightTiles[jackpotTiles[i][j]].GetComponent<Renderer>().material = LightMaterials[1];
+            }
+                
+            yield return new WaitForSeconds(0.2f);
+        }
+    }
+
+    // Firework animation
+    private IEnumerator Firework(int origin) {
+        LightTiles[origin].GetComponent<Renderer>().material = LightMaterials[2];
+        yield return new WaitForSeconds(1.0f / 30.0f);
+
+        LightTiles[origin].GetComponent<Renderer>().material = LightMaterials[0];
+
+        LightTiles[origin + 1].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin - 1].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin + 25].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin - 25].GetComponent<Renderer>().material = LightMaterials[2];
+        yield return new WaitForSeconds(1.0f / 30.0f);
+
+        LightTiles[origin + 1].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 1].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 25].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 25].GetComponent<Renderer>().material = LightMaterials[0];
+
+        LightTiles[origin + 2].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin - 2].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin + 23].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin + 27].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin - 23].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin - 27].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin + 49].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin + 50].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin + 51].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin - 49].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin - 50].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin - 51].GetComponent<Renderer>().material = LightMaterials[2];
+        yield return new WaitForSeconds(2.0f / 30.0f);
+
+        LightTiles[origin + 2].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 2].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 23].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 27].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 23].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 27].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 49].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 50].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 51].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 49].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 50].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 51].GetComponent<Renderer>().material = LightMaterials[0];
+
+        LightTiles[origin + 3].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin - 3].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin + 22].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin + 28].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin - 22].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin - 28].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin + 48].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin + 52].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin - 48].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin - 52].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin + 74].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin + 75].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin + 76].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin - 74].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin - 75].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin - 76].GetComponent<Renderer>().material = LightMaterials[2];
+
+        LightTiles[origin].GetComponent<Renderer>().material = LightMaterials[1];
+        yield return new WaitForSeconds(2.0f / 30.0f);
+
+        LightTiles[origin + 3].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 3].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 22].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 28].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 22].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 28].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 48].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 52].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 48].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 52].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 74].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 75].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 76].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 74].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 75].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 76].GetComponent<Renderer>().material = LightMaterials[0];
+
+        LightTiles[origin + 4].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin - 4].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin + 21].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin + 29].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin - 21].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin - 29].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin + 47].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin + 53].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin - 47].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin - 53].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin + 73].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin + 77].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin - 73].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin - 77].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin + 99].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin + 100].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin + 101].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin - 99].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin - 100].GetComponent<Renderer>().material = LightMaterials[2];
+        LightTiles[origin - 101].GetComponent<Renderer>().material = LightMaterials[2];
+
+        LightTiles[origin + 1].GetComponent<Renderer>().material = LightMaterials[1];
+        LightTiles[origin - 1].GetComponent<Renderer>().material = LightMaterials[1];
+        LightTiles[origin + 24].GetComponent<Renderer>().material = LightMaterials[1];
+        LightTiles[origin + 25].GetComponent<Renderer>().material = LightMaterials[1];
+        LightTiles[origin + 26].GetComponent<Renderer>().material = LightMaterials[1];
+        LightTiles[origin - 24].GetComponent<Renderer>().material = LightMaterials[1];
+        LightTiles[origin - 25].GetComponent<Renderer>().material = LightMaterials[1];
+        LightTiles[origin - 26].GetComponent<Renderer>().material = LightMaterials[1];
+        yield return new WaitForSeconds(2.0f / 30.0f);
+
+        LightTiles[origin].GetComponent<Renderer>().material = LightMaterials[0];
+
+        LightTiles[origin + 2].GetComponent<Renderer>().material = LightMaterials[1];
+        LightTiles[origin - 2].GetComponent<Renderer>().material = LightMaterials[1];
+        LightTiles[origin + 48].GetComponent<Renderer>().material = LightMaterials[1];
+        LightTiles[origin + 50].GetComponent<Renderer>().material = LightMaterials[1];
+        LightTiles[origin + 52].GetComponent<Renderer>().material = LightMaterials[1];
+        LightTiles[origin - 48].GetComponent<Renderer>().material = LightMaterials[1];
+        LightTiles[origin - 50].GetComponent<Renderer>().material = LightMaterials[1];
+        LightTiles[origin - 52].GetComponent<Renderer>().material = LightMaterials[1];
+        yield return new WaitForSeconds(2.0f / 30.0f);
+
+        LightTiles[origin + 4].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 4].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 21].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 29].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 21].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 29].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 47].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 53].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 47].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 53].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 73].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 77].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 73].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 77].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 99].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 100].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 101].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 99].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 100].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 101].GetComponent<Renderer>().material = LightMaterials[0];
+
+        LightTiles[origin + 1].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 1].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 24].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 25].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 26].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 24].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 25].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 26].GetComponent<Renderer>().material = LightMaterials[0];
+
+        LightTiles[origin + 3].GetComponent<Renderer>().material = LightMaterials[1];
+        LightTiles[origin - 3].GetComponent<Renderer>().material = LightMaterials[1];
+        LightTiles[origin + 72].GetComponent<Renderer>().material = LightMaterials[1];
+        LightTiles[origin + 75].GetComponent<Renderer>().material = LightMaterials[1];
+        LightTiles[origin + 78].GetComponent<Renderer>().material = LightMaterials[1];
+        LightTiles[origin - 72].GetComponent<Renderer>().material = LightMaterials[1];
+        LightTiles[origin - 75].GetComponent<Renderer>().material = LightMaterials[1];
+        LightTiles[origin - 78].GetComponent<Renderer>().material = LightMaterials[1];
+        yield return new WaitForSeconds(2.0f / 30.0f);
+
+        LightTiles[origin + 2].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 2].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 48].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 50].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 52].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 48].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 50].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 52].GetComponent<Renderer>().material = LightMaterials[0];
+        yield return new WaitForSeconds(1.0f / 30.0f);
+
+        LightTiles[origin + 3].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 3].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 72].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 75].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin + 78].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 72].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 75].GetComponent<Renderer>().material = LightMaterials[0];
+        LightTiles[origin - 78].GetComponent<Renderer>().material = LightMaterials[0];
     }
 
     // Time ran out
