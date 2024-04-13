@@ -59,6 +59,11 @@ public class FlaminFinger : MonoBehaviour {
 
     private bool canStart = false;
 
+    private bool autosolving = false;
+    private bool TwitchPlaysActive;
+    private int tpFrameWait = 0;
+    private List<int> tileMoveQueue = new List<int>();
+
     private bool focused = false;
     private bool canPlay = false;
     private int selectedTile = 576;
@@ -253,7 +258,28 @@ public class FlaminFinger : MonoBehaviour {
     private void Update() {
         if (focused && canPlay) {
             /// Code taken from Cursor Maze
-            AllHit = Physics.RaycastAll(Camera.main.ScreenPointToRay(Input.mousePosition));
+            if (autosolving || tileMoveQueue.Count > 0)
+            {
+                tpFrameWait--;
+                if (tpFrameWait < 0)
+                {
+                    tpFrameWait = 5;
+                    if (autosolving)
+                        AllHit = Physics.RaycastAll(new Ray(LightTiles[nextTile].transform.position + new Vector3(0f, 0.01f, 0f), -transform.up));
+                    else
+                    {
+                        if (tileMoveQueue[0] == -1)
+                            tileMoveQueue.Clear();
+                        else
+                        {
+                            AllHit = Physics.RaycastAll(new Ray(LightTiles[tileMoveQueue[0]].transform.position + new Vector3(0f, 0.01f, 0f), -transform.up));
+                            tileMoveQueue.RemoveAt(0);
+                        }
+                    }
+                }
+            }
+            else
+                AllHit = Physics.RaycastAll(Camera.main.ScreenPointToRay(Input.mousePosition));
             List<string> names = new List<string>();
 
             foreach (RaycastHit hit in AllHit) {
@@ -920,6 +946,11 @@ public class FlaminFinger : MonoBehaviour {
 
         else
             timeLeft = (float) Math.Round(allMazeTiles * 0.12f, 1);
+        if (TwitchPlaysActive)
+        {
+            timeLeft *= 1.7f;
+            timeLeft = (float)Math.Round(timeLeft, 1);
+        }
 
         Debug.LogFormat("[Flamin' Finger #{0}] You have {1} seconds. Get your flame on!", moduleId, string.Format("{0:F1}", timeLeft));
     }
@@ -1191,6 +1222,7 @@ public class FlaminFinger : MonoBehaviour {
     // Time ran out
     private IEnumerator Fail() {
         canPlay = false;
+        tileMoveQueue.Clear();
         Debug.LogFormat("[Flamin' Finger #{0}] Time's up! You couldn\'t complete the maze!", moduleId);
 
         if (Settings.CanStrike)
@@ -1238,5 +1270,86 @@ public class FlaminFinger : MonoBehaviour {
 
         yield return new WaitForSeconds(2.5f);
         StartCoroutine(WipeGrid(true));
+    }
+
+    // Twitch Plays
+    #pragma warning disable 414
+    private readonly string TwitchHelpMessage = @"!{0} coin [Inserts a coin] | !{0} UDLR [Moves in the specified directions until a wall is hit] | On Twitch Plays the timer is increased by 70% of its normal time";
+    #pragma warning restore 414
+    IEnumerator ProcessTwitchCommand(string command)
+    {
+        if (command.EqualsIgnoreCase("coin"))
+        {
+            yield return null;
+            ScreenButton.OnInteract();
+            yield break;
+        }
+        for (int i = 0; i < command.Length; i++)
+        {
+            if (!command.ToUpper()[i].EqualsAny('U', 'D', 'R', 'L', ' '))
+                yield break;
+        }
+        if (!canPlay)
+        {
+            yield return "sendtochaterror You cannot move on the module right now!";
+            yield break;
+        }
+        yield return null;
+        int curPos = selectedTile;
+        for (int i = 0; i < command.Length; i++)
+        {
+            int amtAdded = 0;
+            if (command.ToUpper()[i] == 'U')
+            {
+                while (grid[curPos] == 1)
+                {
+                    tileMoveQueue.Add(curPos - 25);
+                    curPos -= 25;
+                    amtAdded++;
+                }
+            }
+            else if (command.ToUpper()[i] == 'R')
+            {
+                while (grid[curPos] == 2)
+                {
+                    tileMoveQueue.Add(curPos + 1);
+                    curPos += 1;
+                    amtAdded++;
+                }
+            }
+            else if (command.ToUpper()[i] == 'D')
+            {
+                while (grid[curPos] == 3)
+                {
+                    tileMoveQueue.Add(curPos + 25);
+                    curPos += 25;
+                    amtAdded++;
+                }
+            }
+            else if (command.ToUpper()[i] == 'L')
+            {
+                while (grid[curPos] == 4)
+                {
+                    tileMoveQueue.Add(curPos - 1);
+                    curPos -= 1;
+                    amtAdded++;
+                }
+            }
+            if (amtAdded == 0)
+                tileMoveQueue.Add(-1);
+        }
+        while (tileMoveQueue.Count > 0)
+            yield return null;
+    }
+
+    IEnumerator TwitchHandleForcedSolve()
+    {
+        autosolving = true;
+        focused = true;
+        ScreenButton.OnInteract();
+        while (!moduleSolved)
+            yield return null;
+        focused = false;
+        autosolving = false;
     }
 }
