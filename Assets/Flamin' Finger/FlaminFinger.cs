@@ -1348,11 +1348,7 @@ public class FlaminFinger : MonoBehaviour {
         focused = true;
         ScreenButton.OnInteract();
         while (!moduleSolved)
-        {
-            if (coins == 0 && timeLeft < 0.0f)
-                ScreenButton.OnInteract();
             yield return null;
-        }
         focused = false;
         autosolving = false;
     }
