@@ -258,20 +258,16 @@ public class FlaminFinger : MonoBehaviour {
     private void Update() {
         if (focused && canPlay) {
             /// Code taken from Cursor Maze
-            if (autosolving || tileMoveQueue.Count > 0)
-            {
+            if (autosolving || tileMoveQueue.Count > 0) {
                 tpFrameWait--;
-                if (tpFrameWait < 0)
-                {
+                if (tpFrameWait < 0) {
                     tpFrameWait = 5;
                     if (autosolving)
                         AllHit = Physics.RaycastAll(new Ray(LightTiles[nextTile].transform.position + new Vector3(0f, 0.01f, 0f), -transform.up));
-                    else
-                    {
+                    else {
                         if (tileMoveQueue[0] == -1)
                             tileMoveQueue.Clear();
-                        else
-                        {
+                        else {
                             AllHit = Physics.RaycastAll(new Ray(LightTiles[tileMoveQueue[0]].transform.position + new Vector3(0f, 0.01f, 0f), -transform.up));
                             tileMoveQueue.RemoveAt(0);
                         }
@@ -946,8 +942,8 @@ public class FlaminFinger : MonoBehaviour {
 
         else
             timeLeft = (float) Math.Round(allMazeTiles * 0.12f, 1);
-        if (TwitchPlaysActive)
-        {
+
+        if (TwitchPlaysActive) {
             timeLeft *= 1.7f;
             timeLeft = (float)Math.Round(timeLeft, 1);
         }
@@ -1276,40 +1272,32 @@ public class FlaminFinger : MonoBehaviour {
     #pragma warning disable 414
     private readonly string TwitchHelpMessage = @"!{0} coin [Inserts a coin] | !{0} UDLR [Moves in the specified directions until a wall is hit] | On Twitch Plays the timer is increased by 70% of its normal time";
     #pragma warning restore 414
-    IEnumerator ProcessTwitchCommand(string command)
-    {
-        if (command.EqualsIgnoreCase("coin"))
-        {
+    IEnumerator ProcessTwitchCommand(string command) {
+        if (command.EqualsIgnoreCase("coin")) {
             yield return null;
             ScreenButton.OnInteract();
             yield break;
         }
-        for (int i = 0; i < command.Length; i++)
-        {
+        for (int i = 0; i < command.Length; i++) {
             if (!command.ToUpper()[i].EqualsAny('U', 'D', 'R', 'L', ' '))
                 yield break;
         }
-        if (!canPlay)
-        {
+        if (!canPlay) {
             yield return "sendtochaterror You cannot move on the module right now!";
             yield break;
         }
         yield return null;
         int curPos = selectedTile;
-        for (int i = 0; i < command.Length; i++)
-        {
+        for (int i = 0; i < command.Length; i++) {
             int amtAdded = 0;
-            if (command.ToUpper()[i] == 'U')
-            {
-                while (grid[curPos] == 1)
-                {
+            if (command.ToUpper()[i] == 'U') {
+                while (grid[curPos] == 1) {
                     tileMoveQueue.Add(curPos - 25);
                     curPos -= 25;
                     amtAdded++;
                 }
             }
-            else if (command.ToUpper()[i] == 'R')
-            {
+            else if (command.ToUpper()[i] == 'R') {
                 while (grid[curPos] == 2)
                 {
                     tileMoveQueue.Add(curPos + 1);
@@ -1317,19 +1305,15 @@ public class FlaminFinger : MonoBehaviour {
                     amtAdded++;
                 }
             }
-            else if (command.ToUpper()[i] == 'D')
-            {
-                while (grid[curPos] == 3)
-                {
+            else if (command.ToUpper()[i] == 'D') {
+                while (grid[curPos] == 3) {
                     tileMoveQueue.Add(curPos + 25);
                     curPos += 25;
                     amtAdded++;
                 }
             }
-            else if (command.ToUpper()[i] == 'L')
-            {
-                while (grid[curPos] == 4)
-                {
+            else if (command.ToUpper()[i] == 'L') {
+                while (grid[curPos] == 4) {
                     tileMoveQueue.Add(curPos - 1);
                     curPos -= 1;
                     amtAdded++;
@@ -1342,8 +1326,7 @@ public class FlaminFinger : MonoBehaviour {
             yield return null;
     }
 
-    IEnumerator TwitchHandleForcedSolve()
-    {
+    IEnumerator TwitchHandleForcedSolve() {
         autosolving = true;
         focused = true;
         ScreenButton.OnInteract();
