@@ -263,12 +263,20 @@ public class FlaminFinger : MonoBehaviour {
                 if (tpFrameWait < 0) {
                     tpFrameWait = 5;
                     if (autosolving)
-                        AllHit = Physics.RaycastAll(new Ray(LightTiles[nextTile].transform.position + new Vector3(0f, 0.01f, 0f), -transform.up));
+                    {
+                        if (!Application.isEditor)
+                            AllHit = Physics.RaycastAll(new Ray(LightTiles[nextTile].transform.position + new Vector3(0f, 0f, -0.01f), -transform.up));
+                        else
+                            AllHit = Physics.RaycastAll(new Ray(LightTiles[nextTile].transform.position + new Vector3(0f, 0.01f, 0f), -transform.up));
+                    }
                     else {
                         if (tileMoveQueue[0] == -1)
                             tileMoveQueue.Clear();
                         else {
-                            AllHit = Physics.RaycastAll(new Ray(LightTiles[tileMoveQueue[0]].transform.position + new Vector3(0f, 0.01f, 0f), -transform.up));
+                            if (!Application.isEditor)
+                                AllHit = Physics.RaycastAll(new Ray(LightTiles[tileMoveQueue[0]].transform.position + new Vector3(0f, 0f, -0.01f), -transform.up));
+                            else
+                                AllHit = Physics.RaycastAll(new Ray(LightTiles[tileMoveQueue[0]].transform.position + new Vector3(0f, 0.01f, 0f), -transform.up));
                             tileMoveQueue.RemoveAt(0);
                         }
                     }
