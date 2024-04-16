@@ -1306,8 +1306,7 @@ public class FlaminFinger : MonoBehaviour {
                 }
             }
             else if (command.ToUpper()[i] == 'R') {
-                while (grid[curPos] == 2)
-                {
+                while (grid[curPos] == 2) {
                     tileMoveQueue.Add(curPos + 1);
                     curPos += 1;
                     amtAdded++;
