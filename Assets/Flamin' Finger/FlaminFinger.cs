@@ -40,7 +40,8 @@ public class FlaminFinger : MonoBehaviour {
     private readonly int[] fireworkStarts = { 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139,
         154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 179, 204, 229, 254, 268, 269, 270, 279, 293, 294, 295, 304, 318, 319, 320, 329, 343, 344, 345,
         354, 368, 369, 370, 379, 393, 394, 395, 404, 418, 419, 420, 429, 443, 444, 445, 454, 455, 456, 457, 458, 459, 460, 461, 462, 463, 464, 465, 466, 467, 468, 469, 470,
-        479, 480, 481, 482, 483, 484, 485, 486, 487, 488, 489, 490, 491, 492, 493, 494, 495, 504, 505, 506, 507, 508, 509, 510, 511, 512, 513, 514, 515, 516, 517, 518, 519, 520 };
+        479, 480, 481, 482, 483, 484, 485, 486, 487, 488, 489, 490, 491, 492, 493, 494, 495, 504, 505, 506, 507, 508, 509, 510, 511, 512, 513, 514, 515, 516, 517, 518, 519, 520,
+        180, 181, 182, 205, 206, 230, 190, 216, 242, 380, 405, 406, 430, 431, 432, 392, 416, 417, 440, 441, 442 };
 
     private readonly int[] congratsCenters = { 304, 206, 161, 216, 318, 416, 461, 406 };
 
@@ -727,7 +728,7 @@ public class FlaminFinger : MonoBehaviour {
 
         while (playTrailAnim) {
             StartCoroutine(LightTrail());
-            yield return new WaitForSeconds(0.1f);
+            yield return new WaitForSeconds(8.0f / 60.0f);
         }
     }
 
@@ -737,7 +738,7 @@ public class FlaminFinger : MonoBehaviour {
 
         while (light != selectedTile && playTrailAnim) {
             LightTiles[light].GetComponent<Renderer>().material = LightMaterials[2];
-            yield return new WaitForSeconds(1.0f / 60.0f);
+            yield return new WaitForSeconds(1.0f / 45.0f);
             LightTiles[light].GetComponent<Renderer>().material = LightMaterials[0];
 
             switch (grid[light]) {
@@ -949,7 +950,7 @@ public class FlaminFinger : MonoBehaviour {
             timeLeft = allMazeTiles * 0.2f;
 
         else
-            timeLeft = (float) Math.Round(allMazeTiles * 0.12f, 1);
+            timeLeft = (float) Math.Round(allMazeTiles * 0.11f, 1);
 
         if (TwitchPlaysActive) {
             timeLeft *= 1.7f;
