@@ -50755,7 +50755,7 @@ MonoBehaviour:
   ModuleSelectable: {fileID: 114191571856339200}
   ScreenButton: {fileID: 114426086848584286}
   LightMaterials:
-  - {fileID: 2100000, guid: b724f812ca9b0a14eafb6599acd787a7, type: 2}
+  - {fileID: 2100000, guid: 169c85a11c3228a4cb9273209188f082, type: 2}
   - {fileID: 2100000, guid: 6d8bddf6bea32274e8449e277138564e, type: 2}
   - {fileID: 2100000, guid: a221fba87a0faee489897e3c9ced48ec, type: 2}
   TimerText: {fileID: 102980740996223132}

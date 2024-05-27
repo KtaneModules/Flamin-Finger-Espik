@@ -138,10 +138,7 @@ public class FlaminFinger : MonoBehaviour {
 
     // Sets up the module
     private void Start() {
-        // Removes the invalid tile locations
-        for (int i = 0; i < forbiddenTiles.Length; i++)
-            LightTiles[forbiddenTiles[i]].SetActive(false);
-
+        Blackout();
         SetArrays();
 
         try {
@@ -193,7 +190,7 @@ public class FlaminFinger : MonoBehaviour {
             for (int j = 0; j < 25; j++) {
                 for (int k = 0; k < flaminFingerTiles.Length; k++) {
                     if (flaminFingerTiles[k] == i + j)
-                        LightTiles[i + j].GetComponent<Renderer>().material = LightMaterials[2];
+                        SetLight(i + j, 2, true);
                 }
             }
 
@@ -226,12 +223,12 @@ public class FlaminFinger : MonoBehaviour {
 
             for (int i = 0; i < 19 && animateWave; i++) {
                 if (animateWave)
-                    LightTiles[currentPoint].GetComponent<Renderer>().material = LightMaterials[1];
+                    SetLight(currentPoint, 1, true);
 
                 yield return new WaitForSeconds(0.05f);
 
                 if (animateWave) {
-                    LightTiles[currentPoint].GetComponent<Renderer>().material = LightMaterials[0];
+                    SetLight(currentPoint, 0, false);
                     currentPoint++;
                 }
             }
@@ -242,12 +239,12 @@ public class FlaminFinger : MonoBehaviour {
 
             for (int i = 0; i < 25 && animateWave; i++) {
                 if (animateWave)
-                    LightTiles[currentPoint].GetComponent<Renderer>().material = LightMaterials[1];
+                    SetLight(currentPoint, 1, true);
 
                 yield return new WaitForSeconds(0.05f);
 
                 if (animateWave) {
-                    LightTiles[currentPoint].GetComponent<Renderer>().material = LightMaterials[0];
+                    SetLight(currentPoint, 0, false);
                     currentPoint++;
                 }
             }
@@ -292,9 +289,9 @@ public class FlaminFinger : MonoBehaviour {
                 if (objNames.Contains(hit.collider.name)) {
                     // Move to the next tile
                     if (nextTile == int.Parse(hit.collider.name.Split('-')[1])) {
-                        LightTiles[selectedTile].GetComponent<Renderer>().material = LightMaterials[0];
+                        SetLight(selectedTile, 0, true);
                         selectedTile = nextTile;
-                        LightTiles[selectedTile].GetComponent<Renderer>().material = LightMaterials[2];
+                        SetLight(selectedTile, 2, true);
 
                         switch (grid[selectedTile]) {
                             case 1: // Up
@@ -370,13 +367,18 @@ public class FlaminFinger : MonoBehaviour {
     }
 
 
+    // Changes the color of the tiles
+    private void SetLight(int light, int color, bool active) {
+        LightTiles[light].GetComponent<Renderer>().material = LightMaterials[color];
+        LightTiles[light].SetActive(active);
+    }
+
     // Turns all the tiles to black
     private void Blackout() {
         TimerText.text = "";
 
-        for (int i = 0; i < LightTiles.Length; i++) {
-            LightTiles[i].GetComponent<Renderer>().material = LightMaterials[0];
-        }
+        for (int i = 0; i < LightTiles.Length; i++)
+            SetLight(i, 0, false);
     }
 
     // Removes all red tiles from the grid
@@ -385,7 +387,7 @@ public class FlaminFinger : MonoBehaviour {
 
         for (int i = 0; i < LightTiles.Length; i++) {
             if (grid[i] != -1)
-                LightTiles[i].GetComponent<Renderer>().material = LightMaterials[0];
+                SetLight(i, 0, false);
         }
     }
 
@@ -401,7 +403,7 @@ public class FlaminFinger : MonoBehaviour {
 
         for (int i = transitionTiles.Length - 1; i >= 0; i--) {
             for (int j = 0; j < transitionTiles[i].Length; j++)
-                LightTiles[transitionTiles[i][j]].GetComponent<Renderer>().material = LightMaterials[0];
+                SetLight(transitionTiles[i][j], 0, false);
 
             if (i == 24)
                 TimerText.text = "";
@@ -630,9 +632,13 @@ public class FlaminFinger : MonoBehaviour {
         }
 
         for (int i = 0; i < transitionTiles.Length; i++) {
-            for (int j = 0; j < transitionTiles[i].Length; j++)
+            for (int j = 0; j < transitionTiles[i].Length; j++) {
                 if (grid[transitionTiles[i][j]] == -1)
-                    LightTiles[transitionTiles[i][j]].GetComponent<Renderer>().material = LightMaterials[1];
+                    SetLight(transitionTiles[i][j], 1, true);
+
+                else if (grid[transitionTiles[i][j]] != 0)
+                    SetLight(transitionTiles[i][j], 0, true);
+            }
 
             if (i == 24)
                 DisplayTime(timeLeft);
@@ -646,7 +652,7 @@ public class FlaminFinger : MonoBehaviour {
     // Starts the maze
     private void StartMaze() {
         selectedTile = 576;
-        LightTiles[576].GetComponent<Renderer>().material = LightMaterials[2];
+        SetLight(576, 2, true);
 
         switch (grid[576]) {
             case 2:
@@ -728,7 +734,7 @@ public class FlaminFinger : MonoBehaviour {
 
         while (playTrailAnim) {
             StartCoroutine(LightTrail());
-            yield return new WaitForSeconds(8.0f / 60.0f);
+            yield return new WaitForSeconds(0.1f);
         }
     }
 
@@ -737,9 +743,9 @@ public class FlaminFinger : MonoBehaviour {
         int light = 601;
 
         while (light != selectedTile && playTrailAnim) {
-            LightTiles[light].GetComponent<Renderer>().material = LightMaterials[2];
-            yield return new WaitForSeconds(1.0f / 45.0f);
-            LightTiles[light].GetComponent<Renderer>().material = LightMaterials[0];
+            SetLight(light, 2, true);
+            yield return new WaitForSeconds(1.0f / 60.0f);
+            SetLight(light, 0, false);
 
             switch (grid[light]) {
                 case 1: // Up
@@ -1009,7 +1015,7 @@ public class FlaminFinger : MonoBehaviour {
 
         for (int i = 0; i < congratsCenters.Length; i++) {
             for (int j = 0; j < congratsTiles[i].Length; j++)
-                LightTiles[congratsTiles[i][j]].GetComponent<Renderer>().material = LightMaterials[1];
+                SetLight(congratsTiles[i][j], 1, true);
 
             yield return new WaitForSeconds(0.1f);
         }
@@ -1018,7 +1024,7 @@ public class FlaminFinger : MonoBehaviour {
 
         for (int i = 0; i < congratsCenters.Length; i++) {
             for (int j = 0; j < congratsTiles[i].Length; j++)
-                LightTiles[congratsTiles[i][j]].GetComponent<Renderer>().material = LightMaterials[0];
+                SetLight(congratsTiles[i][j], 0, false);
 
             StartCoroutine(Firework(congratsCenters[i]));
             yield return new WaitForSeconds(1.0f / 30.0f);
@@ -1029,10 +1035,10 @@ public class FlaminFinger : MonoBehaviour {
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < jackpotTiles[i].Length; j++) {
                 if (i % 2 == 1)
-                    LightTiles[jackpotTiles[i][j]].GetComponent<Renderer>().material = LightMaterials[2];
+                    SetLight(jackpotTiles[i][j], 2, true);
                 
                 else
-                    LightTiles[jackpotTiles[i][j]].GetComponent<Renderer>().material = LightMaterials[1];
+                    SetLight(jackpotTiles[i][j], 1, true);
             }
                 
             yield return new WaitForSeconds(0.2f);
@@ -1041,187 +1047,187 @@ public class FlaminFinger : MonoBehaviour {
 
     // Firework animation
     private IEnumerator Firework(int origin) {
-        LightTiles[origin].GetComponent<Renderer>().material = LightMaterials[2];
+        SetLight(origin, 2, true);
         yield return new WaitForSeconds(1.0f / 30.0f);
 
-        LightTiles[origin].GetComponent<Renderer>().material = LightMaterials[0];
+        SetLight(origin, 0, false);
 
-        LightTiles[origin + 1].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin - 1].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin + 25].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin - 25].GetComponent<Renderer>().material = LightMaterials[2];
+        SetLight(origin + 1, 2, true);
+        SetLight(origin - 1, 2, true);
+        SetLight(origin + 25, 2, true);
+        SetLight(origin - 25, 2, true);
         yield return new WaitForSeconds(1.0f / 30.0f);
 
-        LightTiles[origin + 1].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 1].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 25].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 25].GetComponent<Renderer>().material = LightMaterials[0];
+        SetLight(origin + 1, 0, false);
+        SetLight(origin - 1, 0, false);
+        SetLight(origin + 25, 0, false);
+        SetLight(origin - 25, 0, false);
 
-        LightTiles[origin + 2].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin - 2].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin + 23].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin + 27].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin - 23].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin - 27].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin + 49].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin + 50].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin + 51].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin - 49].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin - 50].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin - 51].GetComponent<Renderer>().material = LightMaterials[2];
+        SetLight(origin + 2, 2, true);
+        SetLight(origin - 2, 2, true);
+        SetLight(origin + 23, 2, true);
+        SetLight(origin + 27, 2, true);
+        SetLight(origin - 23, 2, true);
+        SetLight(origin - 27, 2, true);
+        SetLight(origin + 49, 2, true);
+        SetLight(origin + 50, 2, true);
+        SetLight(origin + 51, 2, true);
+        SetLight(origin - 49, 2, true);
+        SetLight(origin - 50, 2, true);
+        SetLight(origin - 51, 2, true);
         yield return new WaitForSeconds(2.0f / 30.0f);
 
-        LightTiles[origin + 2].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 2].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 23].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 27].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 23].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 27].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 49].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 50].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 51].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 49].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 50].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 51].GetComponent<Renderer>().material = LightMaterials[0];
+        SetLight(origin + 2, 0, false);
+        SetLight(origin - 2, 0, false);
+        SetLight(origin + 23, 0, false);
+        SetLight(origin + 27, 0, false);
+        SetLight(origin - 23, 0, false);
+        SetLight(origin - 27, 0, false);
+        SetLight(origin + 49, 0, false);
+        SetLight(origin + 50, 0, false);
+        SetLight(origin + 51, 0, false);
+        SetLight(origin - 49, 0, false);
+        SetLight(origin - 50, 0, false);
+        SetLight(origin - 51, 0, false);
 
-        LightTiles[origin + 3].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin - 3].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin + 22].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin + 28].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin - 22].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin - 28].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin + 48].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin + 52].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin - 48].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin - 52].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin + 74].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin + 75].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin + 76].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin - 74].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin - 75].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin - 76].GetComponent<Renderer>().material = LightMaterials[2];
+        SetLight(origin + 3, 2, true);
+        SetLight(origin - 3, 2, true);
+        SetLight(origin + 22, 2, true);
+        SetLight(origin + 28, 2, true);
+        SetLight(origin - 22, 2, true);
+        SetLight(origin - 28, 2, true);
+        SetLight(origin + 48, 2, true);
+        SetLight(origin + 52, 2, true);
+        SetLight(origin - 48, 2, true);
+        SetLight(origin - 52, 2, true);
+        SetLight(origin + 74, 2, true);
+        SetLight(origin + 75, 2, true);
+        SetLight(origin + 76, 2, true);
+        SetLight(origin - 74, 2, true);
+        SetLight(origin - 75, 2, true);
+        SetLight(origin - 76, 2, true);
 
-        LightTiles[origin].GetComponent<Renderer>().material = LightMaterials[1];
+        SetLight(origin, 1, true);
         yield return new WaitForSeconds(2.0f / 30.0f);
 
-        LightTiles[origin + 3].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 3].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 22].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 28].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 22].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 28].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 48].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 52].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 48].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 52].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 74].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 75].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 76].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 74].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 75].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 76].GetComponent<Renderer>().material = LightMaterials[0];
+        SetLight(origin + 3, 0, false);
+        SetLight(origin - 3, 0, false);
+        SetLight(origin + 22, 0, false);
+        SetLight(origin + 28, 0, false);
+        SetLight(origin - 22, 0, false);
+        SetLight(origin - 28, 0, false);
+        SetLight(origin + 48, 0, false);
+        SetLight(origin + 52, 0, false);
+        SetLight(origin - 48, 0, false);
+        SetLight(origin - 52, 0, false);
+        SetLight(origin + 74, 0, false);
+        SetLight(origin + 75, 0, false);
+        SetLight(origin + 76, 0, false);
+        SetLight(origin - 74, 0, false);
+        SetLight(origin - 75, 0, false);
+        SetLight(origin - 76, 0, false);
 
-        LightTiles[origin + 4].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin - 4].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin + 21].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin + 29].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin - 21].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin - 29].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin + 47].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin + 53].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin - 47].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin - 53].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin + 73].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin + 77].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin - 73].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin - 77].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin + 99].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin + 100].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin + 101].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin - 99].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin - 100].GetComponent<Renderer>().material = LightMaterials[2];
-        LightTiles[origin - 101].GetComponent<Renderer>().material = LightMaterials[2];
+        SetLight(origin + 4, 2, true);
+        SetLight(origin - 4, 2, true);
+        SetLight(origin + 21, 2, true);
+        SetLight(origin + 29, 2, true);
+        SetLight(origin - 21, 2, true);
+        SetLight(origin - 29, 2, true);
+        SetLight(origin + 47, 2, true);
+        SetLight(origin + 53, 2, true);
+        SetLight(origin - 47, 2, true);
+        SetLight(origin - 53, 2, true);
+        SetLight(origin + 73, 2, true);
+        SetLight(origin + 77, 2, true);
+        SetLight(origin - 73, 2, true);
+        SetLight(origin - 77, 2, true);
+        SetLight(origin + 99, 2, true);
+        SetLight(origin + 100, 2, true);
+        SetLight(origin + 101, 2, true);
+        SetLight(origin - 99, 2, true);
+        SetLight(origin - 100, 2, true);
+        SetLight(origin - 101, 2, true);
 
-        LightTiles[origin + 1].GetComponent<Renderer>().material = LightMaterials[1];
-        LightTiles[origin - 1].GetComponent<Renderer>().material = LightMaterials[1];
-        LightTiles[origin + 24].GetComponent<Renderer>().material = LightMaterials[1];
-        LightTiles[origin + 25].GetComponent<Renderer>().material = LightMaterials[1];
-        LightTiles[origin + 26].GetComponent<Renderer>().material = LightMaterials[1];
-        LightTiles[origin - 24].GetComponent<Renderer>().material = LightMaterials[1];
-        LightTiles[origin - 25].GetComponent<Renderer>().material = LightMaterials[1];
-        LightTiles[origin - 26].GetComponent<Renderer>().material = LightMaterials[1];
+        SetLight(origin + 1, 1, true);
+        SetLight(origin - 1, 1, true);
+        SetLight(origin + 24, 1, true);
+        SetLight(origin + 25, 1, true);
+        SetLight(origin + 26, 1, true);
+        SetLight(origin - 24, 1, true);
+        SetLight(origin - 25, 1, true);
+        SetLight(origin - 26, 1, true);
         yield return new WaitForSeconds(2.0f / 30.0f);
 
-        LightTiles[origin].GetComponent<Renderer>().material = LightMaterials[0];
+        SetLight(origin, 0, false);
 
-        LightTiles[origin + 2].GetComponent<Renderer>().material = LightMaterials[1];
-        LightTiles[origin - 2].GetComponent<Renderer>().material = LightMaterials[1];
-        LightTiles[origin + 48].GetComponent<Renderer>().material = LightMaterials[1];
-        LightTiles[origin + 50].GetComponent<Renderer>().material = LightMaterials[1];
-        LightTiles[origin + 52].GetComponent<Renderer>().material = LightMaterials[1];
-        LightTiles[origin - 48].GetComponent<Renderer>().material = LightMaterials[1];
-        LightTiles[origin - 50].GetComponent<Renderer>().material = LightMaterials[1];
-        LightTiles[origin - 52].GetComponent<Renderer>().material = LightMaterials[1];
+        SetLight(origin + 2, 1, true);
+        SetLight(origin - 2, 1, true);
+        SetLight(origin + 48, 1, true);
+        SetLight(origin + 50, 1, true);
+        SetLight(origin + 52, 1, true);
+        SetLight(origin - 48, 1, true);
+        SetLight(origin - 50, 1, true);
+        SetLight(origin - 52, 1, true);
         yield return new WaitForSeconds(2.0f / 30.0f);
 
-        LightTiles[origin + 4].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 4].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 21].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 29].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 21].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 29].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 47].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 53].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 47].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 53].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 73].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 77].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 73].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 77].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 99].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 100].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 101].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 99].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 100].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 101].GetComponent<Renderer>().material = LightMaterials[0];
+        SetLight(origin + 4, 0, false);
+        SetLight(origin - 4, 0, false);
+        SetLight(origin + 21, 0, false);
+        SetLight(origin + 29, 0, false);
+        SetLight(origin - 21, 0, false);
+        SetLight(origin - 29, 0, false);
+        SetLight(origin + 47, 0, false);
+        SetLight(origin + 53, 0, false);
+        SetLight(origin - 47, 0, false);
+        SetLight(origin - 53, 0, false);
+        SetLight(origin + 73, 0, false);
+        SetLight(origin + 77, 0, false);
+        SetLight(origin - 73, 0, false);
+        SetLight(origin - 77, 0, false);
+        SetLight(origin + 99, 0, false);
+        SetLight(origin + 100, 0, false);
+        SetLight(origin + 101, 0, false);
+        SetLight(origin - 99, 0, false);
+        SetLight(origin - 100, 0, false);
+        SetLight(origin - 101, 0, false);
 
-        LightTiles[origin + 1].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 1].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 24].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 25].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 26].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 24].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 25].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 26].GetComponent<Renderer>().material = LightMaterials[0];
+        SetLight(origin + 1, 0, false);
+        SetLight(origin - 1, 0, false);
+        SetLight(origin + 24, 0, false);
+        SetLight(origin + 25, 0, false);
+        SetLight(origin + 26, 0, false);
+        SetLight(origin - 24, 0, false);
+        SetLight(origin - 25, 0, false);
+        SetLight(origin - 26, 0, false);
 
-        LightTiles[origin + 3].GetComponent<Renderer>().material = LightMaterials[1];
-        LightTiles[origin - 3].GetComponent<Renderer>().material = LightMaterials[1];
-        LightTiles[origin + 72].GetComponent<Renderer>().material = LightMaterials[1];
-        LightTiles[origin + 75].GetComponent<Renderer>().material = LightMaterials[1];
-        LightTiles[origin + 78].GetComponent<Renderer>().material = LightMaterials[1];
-        LightTiles[origin - 72].GetComponent<Renderer>().material = LightMaterials[1];
-        LightTiles[origin - 75].GetComponent<Renderer>().material = LightMaterials[1];
-        LightTiles[origin - 78].GetComponent<Renderer>().material = LightMaterials[1];
+        SetLight(origin + 3, 1, true);
+        SetLight(origin - 3, 1, true);
+        SetLight(origin + 72, 1, true);
+        SetLight(origin + 75, 1, true);
+        SetLight(origin + 78, 1, true);
+        SetLight(origin - 72, 1, true);
+        SetLight(origin - 75, 1, true);
+        SetLight(origin - 78, 1, true);
         yield return new WaitForSeconds(2.0f / 30.0f);
 
-        LightTiles[origin + 2].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 2].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 48].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 50].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 52].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 48].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 50].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 52].GetComponent<Renderer>().material = LightMaterials[0];
+        SetLight(origin + 2, 0, false);
+        SetLight(origin - 2, 0, false);
+        SetLight(origin + 48, 0, false);
+        SetLight(origin + 50, 0, false);
+        SetLight(origin + 52, 0, false);
+        SetLight(origin - 48, 0, false);
+        SetLight(origin - 50, 0, false);
+        SetLight(origin - 52, 0, false);
         yield return new WaitForSeconds(1.0f / 30.0f);
 
-        LightTiles[origin + 3].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 3].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 72].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 75].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin + 78].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 72].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 75].GetComponent<Renderer>().material = LightMaterials[0];
-        LightTiles[origin - 78].GetComponent<Renderer>().material = LightMaterials[0];
+        SetLight(origin + 3, 0, false);
+        SetLight(origin - 3, 0, false);
+        SetLight(origin + 72, 0, false);
+        SetLight(origin + 75, 0, false);
+        SetLight(origin + 78, 0, false);
+        SetLight(origin - 72, 0, false);
+        SetLight(origin - 75, 0, false);
+        SetLight(origin - 78, 0, false);
     }
 
     // Time ran out
