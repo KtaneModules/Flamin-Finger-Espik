@@ -263,18 +263,18 @@ public class FlaminFinger : MonoBehaviour {
                     if (autosolving)
                     {
                         if (!Application.isEditor)
-                            AllHit = Physics.RaycastAll(new Ray(LightTiles[nextTile].transform.position + new Vector3(0f, 0f, -0.01f), -transform.up));
+                            AllHit = Physics.RaycastAll(new Ray(LightTiles[nextTile].transform.position + new Vector3(0f, 0f, -0.01f), Vector3.forward));
                         else
-                            AllHit = Physics.RaycastAll(new Ray(LightTiles[nextTile].transform.position + new Vector3(0f, 0.01f, 0f), -transform.up));
+                            AllHit = Physics.RaycastAll(new Ray(LightTiles[nextTile].transform.position + new Vector3(0f, 0.01f, 0f), -Vector3.up));
                     }
                     else {
                         if (tileMoveQueue[0] == -1)
                             tileMoveQueue.Clear();
                         else {
                             if (!Application.isEditor)
-                                AllHit = Physics.RaycastAll(new Ray(LightTiles[tileMoveQueue[0]].transform.position + new Vector3(0f, 0f, -0.01f), -transform.up));
+                                AllHit = Physics.RaycastAll(new Ray(LightTiles[tileMoveQueue[0]].transform.position + new Vector3(0f, 0f, -0.01f), Vector3.forward));
                             else
-                                AllHit = Physics.RaycastAll(new Ray(LightTiles[tileMoveQueue[0]].transform.position + new Vector3(0f, 0.01f, 0f), -transform.up));
+                                AllHit = Physics.RaycastAll(new Ray(LightTiles[tileMoveQueue[0]].transform.position + new Vector3(0f, 0.01f, 0f), -Vector3.up));
                             tileMoveQueue.RemoveAt(0);
                         }
                     }
